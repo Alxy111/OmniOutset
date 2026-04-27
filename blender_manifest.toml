@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "omni_outset"
-version = "1.1.0"
+version = "1.1.1"
 name = "OmniOutset"
 tagline = "Smart Face and Equidistant Edge Extrude"
 maintainer = "ZXY"

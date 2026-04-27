@@ -1,13 +1,19 @@
-﻿import bmesh
+import bmesh
 import bpy
 import rna_keymap_ui
 from mathutils import Vector
 
 from . import translation
 
+i18n_contexts = bpy.app.translations.contexts
+
 VERT_MATCH_EPSILON = 0.0001
 COORD_KEY_DIGITS = 6
 ADDON_MODULE = __package__ or __name__
+HOTKEY_TYPE = "E"
+HOTKEY_VALUE = "PRESS"
+HOTKEY_SHIFT = True
+HOTKEY_ALT = True
 
 
 def _safe_normalized(vector):
@@ -50,7 +56,6 @@ def _take_matching_old_vert(new_vert, old_vert_lookup):
         if best_index is not None and best_distance <= VERT_MATCH_EPSILON:
             return candidates.pop(best_index)
 
-    # Fallback for precision mismatch between copied vertices.
     best_key = None
     best_index = None
     best_distance = float("inf")
@@ -100,6 +105,18 @@ def _free_backup(operator):
     if backup is not None:
         backup.free()
         operator._bm_backup = None
+
+
+def _find_matching_keymap_items(km):
+    return [
+        item
+        for item in km.keymap_items
+        if item.idname == MESH_OT_omnioutset_smart_call.bl_idname
+        and item.type == HOTKEY_TYPE
+        and item.value == HOTKEY_VALUE
+        and item.shift == HOTKEY_SHIFT
+        and item.alt == HOTKEY_ALT
+    ]
 
 
 def _compute_face_extrude_data(sel_faces):
@@ -228,10 +245,23 @@ class MESH_OT_omnioutset_face(bpy.types.Operator):
 
     bl_idname = "mesh.omnioutset_smart_face"
     bl_label = "Smart Face Extrude"
+    bl_translation_context = i18n_contexts.operator_default
     bl_options = {"REGISTER", "UNDO", "GRAB_CURSOR", "BLOCKING"}
 
-    extrude_dist: bpy.props.FloatProperty(name="Extrude Distance", default=0.0, step=0.01)
-    outward_offset: bpy.props.FloatProperty(name="Outward Offset", default=0.0, step=0.01)
+    extrude_dist: bpy.props.FloatProperty(
+        name="Extrude Distance",
+        translation_context=i18n_contexts.operator_default,
+        default=0.0,
+        step=0.01,
+        subtype='DISTANCE',
+    )
+    outward_offset: bpy.props.FloatProperty(
+        name="Outward Offset",
+        translation_context=i18n_contexts.operator_default,
+        default=0.0,
+        step=0.01,
+        subtype='DISTANCE',
+    )
 
     @classmethod
     def poll(cls, context):
@@ -388,10 +418,23 @@ class MESH_OT_omnioutset_edge(bpy.types.Operator):
 
     bl_idname = "mesh.omnioutset_edge"
     bl_label = "Equidistant Edge Extrude"
+    bl_translation_context = i18n_contexts.operator_default
     bl_options = {"REGISTER", "UNDO", "GRAB_CURSOR", "BLOCKING"}
 
-    outward_offset: bpy.props.FloatProperty(name="Outward Offset", default=0.0, step=0.01)
-    local_z_offset: bpy.props.FloatProperty(name="Z Axis Offset", default=0.0, step=0.01)
+    outward_offset: bpy.props.FloatProperty(
+        name="Outward Offset",
+        translation_context=i18n_contexts.operator_default,
+        default=0.0,
+        step=0.01,
+        subtype='DISTANCE',
+    )
+    local_z_offset: bpy.props.FloatProperty(
+        name="Z Axis Offset",
+        translation_context=i18n_contexts.operator_default,
+        default=0.0,
+        step=0.01,
+        subtype='DISTANCE',
+    )
 
     @classmethod
     def poll(cls, context):
@@ -407,7 +450,7 @@ class MESH_OT_omnioutset_edge(bpy.types.Operator):
 
         sel_edges = [edge for edge in bm.edges if edge.select]
         if not sel_edges:
-            self.report({"WARNING"}, "Please select boundary edges first!")
+            self.report({"WARNING"}, "Please select edges first!")
             return {"CANCELLED"}
 
         vert_outward_vectors, vert_z_vectors = _compute_edge_extrude_data(sel_edges)
@@ -440,7 +483,7 @@ class MESH_OT_omnioutset_edge(bpy.types.Operator):
 
         sel_edges = [edge for edge in self.bm.edges if edge.select]
         if not sel_edges:
-            self.report({"WARNING"}, "Please select boundary edges first!")
+            self.report({"WARNING"}, "Please select edges first!")
             _free_backup(self)
             return {"CANCELLED"}
 
@@ -526,6 +569,7 @@ class MESH_OT_omnioutset_smart_call(bpy.types.Operator):
 
     bl_idname = "mesh.omnioutset_smart_call"
     bl_label = "Smart OmniOutset Call"
+    bl_translation_context = i18n_contexts.operator_default
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
@@ -556,6 +600,7 @@ class MESH_OT_omnioutset_smart_call(bpy.types.Operator):
 # -------------------------------------------------------------------
 class OmniOutsetPreferences(bpy.types.AddonPreferences):
     bl_idname = ADDON_MODULE
+    bl_translation_context = i18n_contexts.default
 
     def draw(self, context):
         layout = self.layout
@@ -647,13 +692,16 @@ def register():
     kc = wm.keyconfigs.addon if wm else None
     if kc:
         km = kc.keymaps.new(name="Mesh", space_type="EMPTY")
-        kmi = km.keymap_items.new(
+        existing_items = _find_matching_keymap_items(km)
+        kmi = existing_items[0] if existing_items else km.keymap_items.new(
             MESH_OT_omnioutset_smart_call.bl_idname,
-            "E",
-            "PRESS",
-            shift=True,
-            alt=True,
+            HOTKEY_TYPE,
+            HOTKEY_VALUE,
+            shift=HOTKEY_SHIFT,
+            alt=HOTKEY_ALT,
         )
+        for extra_item in existing_items[1:]:
+            km.keymap_items.remove(extra_item)
         addon_keymaps.append((km, kmi))
 
 
