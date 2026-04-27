@@ -1,11 +1,13 @@
 schema_version = "1.0.0"
 id = "omni_outset"
-version = "1.0.0"
+version = "1.1.0"
 name = "OmniOutset"
-tagline = "Smart face normal extrusion with boundary outset and equidistant edge extrusion."
+tagline = "Smart Face and Equidistant Edge Extrude"
 maintainer = "ZXY"
 type = "add-on"
+website = "https://extensions.blender.org/add-ons/omnioutset/"
+tags = ["Modeling"]
 blender_version_min = "4.2.0"
 license = [
-    "SPDX-License-Identifier: GPL-2.0-or-later"
+  "SPDX:GPL-3.0-or-later",
 ]
